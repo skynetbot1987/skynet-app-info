@@ -78,8 +78,41 @@
     status.textContent = 'TikTok rejected the request.';
     show('Error', error + (desc ? ' — ' + desc : ''));
   } else if (code) {
-    status.textContent = 'Success — authorization code received.';
-    const c = show('Authorization code', code);
+    status.textContent = 'Handing the code to your local login script…';
+    show('Authorization code', code);
+    show('Full address (fallback if the send fails)', location.href);
+
+    // TikTok codes expire within a couple of minutes, so the exchange has to
+    // start the moment this page loads. POST it straight to the listener; the
+    // displayed code above stays as the manual fallback.
+    const note = document.createElement('p');
+    note.className = 'label';
+    note.textContent = 'Local handoff';
+    const result = document.createElement('p');
+    result.textContent = 'Sending…';
+    box.append(note, result);
+
+    fetch('http://localhost:8731/code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: code, state: params.get('state') || '' })
+    })
+      .then(r => r.text().then(t => ({ ok: r.ok, body: t })))
+      .then(res => {
+        result.textContent = res.ok
+          ? 'Delivered. The terminal is trading it for tokens now.'
+          : 'Listener rejected it: ' + res.body;
+        result.style.color = res.ok ? '' : '#e8746b';
+        status.textContent = res.ok
+          ? 'Done — go back to the terminal.'
+          : 'Automatic handoff failed — use the code above.';
+      })
+      .catch(() => {
+        result.textContent = 'Could not reach localhost:8731 (is the login script running?). '
+          + 'Copy the code above into the terminal instead.';
+        result.style.color = '#e8746b';
+      });
+
     const b = document.createElement('button');
     b.textContent = 'Copy code';
     b.onclick = () => {
@@ -88,8 +121,6 @@
         () => { b.textContent = 'Press Ctrl+C manually'; });
     };
     box.append(b);
-    // Also keep the whole URL reachable, since pasting that works too.
-    show('Full address (also works)', location.href);
   } else {
     status.textContent = 'Nothing to read — this page is the callback target and shows a code only after you authorize.';
   }
