@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skynet — authorization callback</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0 auto; padding: 48px 24px; max-width: 720px;
+    background: #0b1220; color: #e6e9ef;
+    font: 16px/1.6 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  h1 { color: #e8b464; font-size: 26px; margin: 0 0 4px; }
+  .sub { color: #8a93a6; margin: 0 0 28px; }
+  .card {
+    border: 1px solid #1e2b40; border-radius: 10px;
+    padding: 20px; margin: 0 0 20px;
+  }
+  code {
+    display: block; background: #162842; padding: 14px 16px; border-radius: 6px;
+    font: 13px/1.5 ui-monospace, Consolas, monospace; word-break: break-all;
+    white-space: pre-wrap; margin: 10px 0 0; color: #f4dcae;
+  }
+  .label { color: #8a93a6; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; }
+  .err { color: #e8746b; }
+  ol { padding-left: 22px; }
+  li { margin: 6px 0; }
+  button {
+    background: #e8b464; color: #0b1220; border: 0; border-radius: 6px;
+    padding: 9px 18px; font-weight: 650; font-size: 14px; cursor: pointer;
+    margin-top: 12px;
+  }
+  button:active { transform: translateY(1px); }
+</style>
+</head>
+<body>
+
+<h1>Authorization callback</h1>
+<p class="sub">Skynet — personal TikTok analytics tool.</p>
+
+<div id="out" class="card">
+  <p class="label">Status</p>
+  <p id="status">Reading the response…</p>
+</div>
+
+<div class="card">
+  <p class="label">What to do</p>
+  <ol>
+    <li>Copy the <strong>authorization code</strong> below.</li>
+    <li>Paste it into the terminal window where the login script is waiting.</li>
+  </ol>
+</div>
+
+<script>
+  const box = document.getElementById('out');
+  const status = document.getElementById('status');
+  const params = new URLSearchParams(location.search);
+  const code = params.get('code');
+  const error = params.get('error');
+  const desc = params.get('error_description');
+
+  function show(label, value) {
+    const p = document.createElement('p');
+    const l = document.createElement('p');
+    l.className = 'label';
+    l.textContent = label;
+    const c = document.createElement('code');
+    c.textContent = value;
+    box.append(l, c);
+    return c;
+  }
+
+  if (error) {
+    status.innerHTML = '';
+    box.className = 'card err';
+    status.className = 'err';
+    status.textContent = 'TikTok rejected the request.';
+    show('Error', error + (desc ? ' — ' + desc : ''));
+  } else if (code) {
+    status.textContent = 'Success — authorization code received.';
+    const c = show('Authorization code', code);
+    const b = document.createElement('button');
+    b.textContent = 'Copy code';
+    b.onclick = () => {
+      navigator.clipboard.writeText(code).then(
+        () => { b.textContent = 'Copied'; },
+        () => { b.textContent = 'Press Ctrl+C manually'; });
+    };
+    box.append(b);
+    // Also keep the whole URL reachable, since pasting that works too.
+    show('Full address (also works)', location.href);
+  } else {
+    status.textContent = 'Nothing to read — this page is the callback target and shows a code only after you authorize.';
+  }
+</script>
+
+</body>
+</html>
